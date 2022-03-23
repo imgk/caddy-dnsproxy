@@ -2,15 +2,22 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/caddyserver/caddy/v2"
 
-	"github.com/AdguardTeam/dnsproxy/upstream"
 	"github.com/miekg/dns"
 	"go.uber.org/zap"
 )
 
 const CaddyAppID = "dnsproxy"
+
+const (
+	DefaultUDPPort  = 53
+	DefaultTCPPort  = 53
+	DefaultTLSPort  = 853
+	DefaultQuicPort = 853
+)
 
 func init() {
 	caddy.RegisterModule(App{})
@@ -18,12 +25,21 @@ func init() {
 
 // App is ...
 type App struct {
+	// Handlers is ...
 	Handlers []*struct {
-		Upstream    string            `json:"upstream"`
-		Bootstrap   string            `json:"bootstrap,omitempty"`
-		Timeout     caddy.Duration    `json:"timeout,omitempty"`
+		UpstreamRaw json.RawMessage   `json:"upstream" caddy:"namespace=dnsproxy.upstreams inline_key=upstream"`
 		MatchersRaw []json.RawMessage `json:"match" caddy:"namespace=dnsproxy.matchers inline_key=matcher"`
 	} `json:"handlers"`
+	// ListenUDP is ...
+	ListenUDP int `json:"udp,omitempty"`
+	// ListenTCP is ...
+	ListenTCP int `json:"tcp,omitempty"`
+	// ListenTLS is ...
+	ListenTLS int `json:"tls,omitempty"`
+	// ListenQuic is ...
+	ListenQuic int `json:"quic,omitempty"`
+	// Servers is ...
+	Servers []string `json:"servers,omitempty"`
 
 	lg       *zap.Logger
 	handlers []Handler
@@ -39,16 +55,30 @@ func (App) CaddyModule() caddy.ModuleInfo {
 
 // Provision is ...
 func (app *App) Provision(ctx caddy.Context) error {
+	if app.ListenUDP == 0 {
+		app.ListenUDP = DefaultUDPPort
+	}
+	if app.ListenTCP == 0 {
+		app.ListenTCP = DefaultTCPPort
+	}
+	if app.ListenTLS == 0 {
+		app.ListenTLS = DefaultTLSPort
+	}
+	if app.ListenQuic == 0 {
+		app.ListenQuic = DefaultQuicPort
+	}
+
 	app.lg = ctx.Logger(app)
+
 	for _, v := range app.Handlers {
 		hd := Handler{}
 
 		// parse upstream
-		up, err := upstream.AddressToUpstream(v.Upstream, nil)
+		mod, err := ctx.LoadModule(v, "UpstreamRaw")
 		if err != nil {
 			return err
 		}
-		hd.Upstream = up
+		hd.Upstream = mod.(Upstream)
 
 		// parse matchers
 		mods, err := ctx.LoadModule(v, "MatchersRaw")
@@ -61,6 +91,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 
 		app.handlers = append(app.handlers, hd)
 	}
+
 	return nil
 }
 
@@ -98,13 +129,13 @@ func (app *App) Exchange(in *dns.Msg) (*dns.Msg, error) {
 			return v.Exchange(in)
 		}
 	}
-	return nil, nil
+	return nil, errors.New("no valid handler")
 }
 
 // Handler is ...
 type Handler struct {
 	// Upstream is ...
-	upstream.Upstream
+	Upstream
 	// Matchers is ...
 	Matchers []Matcher
 }
