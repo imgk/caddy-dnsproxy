@@ -7,6 +7,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 
 	"github.com/miekg/dns"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 )
 
@@ -43,6 +44,7 @@ type App struct {
 
 	lg       *zap.Logger
 	handlers []Handler
+	servers  []Server
 }
 
 // CaddyModule is ...
@@ -69,6 +71,19 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	app.lg = ctx.Logger(app)
+
+	for _, v := range app.Servers {
+		switch v {
+		case "tcp", "udp", "tls", "quic":
+			srv, err := NewServer(app, ctx, v)
+			if err != nil {
+				return err
+			}
+			app.servers = append(app.servers, srv)
+		default:
+			return errors.New("not a valid server type")
+		}
+	}
 
 	for _, v := range app.Handlers {
 		hd := Handler{}
@@ -102,24 +117,43 @@ func (app *App) Validate() error {
 
 // Start is ...
 func (app *App) Start() error {
+	for _, srv := range app.servers {
+		go srv.Run()
+	}
 	return nil
 }
 
 // Stop is ...
 func (app *App) Stop() error {
+	errs := []error{}
+	for _, srv := range app.servers {
+		if err := srv.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) != 0 {
+		return multierr.Combine(errs...)
+	}
 	return nil
 }
 
 // Cleanup is ...
 func (app *App) Cleanup() error {
+	errs := []error{}
 	for _, v := range app.handlers {
-		for _, vv := range v.Matchers {
-			if cu, ok := vv.(caddy.CleanerUpper); ok {
-				cu.Cleanup()
-			}
+		if err := v.Cleanup(); err != nil {
+			errs = append(errs, err)
 		}
 	}
+	if len(errs) != 0 {
+		return multierr.Combine(errs...)
+	}
 	return nil
+}
+
+// Logger is ...
+func (app *App) Logger() *zap.Logger {
+	return app.lg
 }
 
 // Exchange is ...
@@ -148,6 +182,22 @@ func (h *Handler) Match(msg *dns.Msg) bool {
 		}
 	}
 	return false
+}
+
+// Cleanup is ...
+func (h *Handler) Cleanup() error {
+	errs := []error{}
+	for _, vv := range h.Matchers {
+		if cu, ok := vv.(caddy.CleanerUpper); ok {
+			if err := cu.Cleanup(); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+	if len(errs) != 0 {
+		return multierr.Combine(errs...)
+	}
+	return nil
 }
 
 var (
