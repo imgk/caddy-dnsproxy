@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
-	"unsafe"
 
 	"github.com/caddyserver/caddy/v2"
 
@@ -48,17 +47,17 @@ func NewBufferPool() *BufferPool {
 // NewBuffer is ...
 func NewBuffer() any {
 	buf := make([]byte, dns.MaxMsgSize)
-	return &buf[0]
+	return &buf
 }
 
 // Get is ...
 func (p *BufferPool) Get() []byte {
-	return unsafe.Slice(p.Pool.Get().(*byte), dns.MaxMsgSize)
+	return *(p.Pool.Get().(*[]byte))
 }
 
 // Put is ...
 func (p *BufferPool) Put(buf []byte) {
-	p.Pool.Put(&buf[0])
+	p.Pool.Put(&buf)
 }
 
 // App is ...
@@ -111,6 +110,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	app.lg = ctx.Logger(app)
+	app.bp = NewBufferPool()
 
 	for _, v := range app.Servers {
 		switch v {
@@ -147,7 +147,6 @@ func (app *App) Provision(ctx caddy.Context) error {
 		app.handlers = append(app.handlers, hd)
 	}
 
-	app.bp = NewBufferPool()
 	return nil
 }
 
