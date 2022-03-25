@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/json"
 	"errors"
-	"sync"
 
 	"github.com/caddyserver/caddy/v2"
 
@@ -28,36 +27,6 @@ const (
 
 func init() {
 	caddy.RegisterModule(App{})
-}
-
-// BufferPool is ...
-type BufferPool struct {
-	sync.Pool
-}
-
-// NewBufferPool is ...
-func NewBufferPool() *BufferPool {
-	return &BufferPool{
-		Pool: sync.Pool{
-			New: NewBuffer,
-		},
-	}
-}
-
-// NewBuffer is ...
-func NewBuffer() any {
-	buf := make([]byte, dns.MaxMsgSize)
-	return &buf
-}
-
-// Get is ...
-func (p *BufferPool) Get() []byte {
-	return *(p.Pool.Get().(*[]byte))
-}
-
-// Put is ...
-func (p *BufferPool) Put(buf []byte) {
-	p.Pool.Put(&buf)
 }
 
 // App is ...
