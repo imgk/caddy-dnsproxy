@@ -13,6 +13,7 @@ func init() {
 
 // Upstream is ...
 type Upstream interface {
+	// Exchange is ...
 	Exchange(m *dns.Msg) (*dns.Msg, error)
 }
 

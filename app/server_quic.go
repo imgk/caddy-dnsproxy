@@ -10,18 +10,27 @@ import (
 	"go.uber.org/zap"
 )
 
+// NextProtoDQ is the ALPN token for DoQ. During connection establishment,
+// DNS/QUIC support is indicated by selecting the ALPN token "dq" in the
+// crypto handshake.
+// Current draft version:
+// https://datatracker.ietf.org/doc/html/draft-ietf-dprive-dnsoquic-02
+const NextProtoDQ = "doq-i02"
+
 // Quic is ...
 type Quic struct {
 	// Listener is ...
 	Listener quic.Listener
-	// App is ...
-	App *App
+	// BufferPool is ...
+	*BufferPool
 
+	up Upstream
 	lg *zap.Logger
 }
 
 // Run is ...
 func (s *Quic) Run() {
+	// accept new session
 	for {
 		sess, err := s.Listener.Accept(context.Background())
 		if err != nil {
@@ -44,6 +53,7 @@ func (s *Quic) Close() error {
 func (s *Quic) handleSession(sess quic.Session) {
 	defer sess.CloseWithError(0, "")
 
+	// accept new stream
 	for {
 		stream, err := sess.AcceptStream(context.Background())
 		if err != nil {
@@ -57,30 +67,37 @@ func (s *Quic) handleSession(sess quic.Session) {
 func (s *Quic) handleStream(stream quic.Stream) {
 	defer stream.Close()
 
-	buf := make([]byte, 2048)
+	buf := s.Get()
+	defer s.Put(buf)
+
 	msg := &dns.Msg{}
 
+	// read message
 	n, err := stream.Read(buf)
 	if err != nil {
-		s.lg.Error(fmt.Sprintf("quic error: read stream error: %v", err))
+		s.lg.Error(fmt.Sprintf("server error: read stream error: %v", err))
 		return
 	}
 	if err := msg.Unpack(buf[:n]); err != nil {
-		s.lg.Error(fmt.Sprintf("quic error: quic error: unpack error: %v", err))
+		s.lg.Error(fmt.Sprintf("server error: unpack error: %v", err))
 		return
 	}
-	msg, err = s.App.Exchange(msg)
+
+	// request response
+	msg, err = s.up.Exchange(msg)
 	if err != nil {
-		s.lg.Error(fmt.Sprintf("quic error: exchange error: %v", err))
+		s.lg.Error(fmt.Sprintf("server error: exchange error: %v", err))
 		return
 	}
 	bb, err := msg.PackBuffer(buf)
 	if err != nil {
-		s.lg.Error(fmt.Sprintf("quic error: pack error: %v", err))
+		s.lg.Error(fmt.Sprintf("server error: pack error: %v", err))
 		return
 	}
+
+	// write message
 	if _, err := stream.Write(bb); err != nil {
-		s.lg.Error(fmt.Sprintf("quic error: write error: %v", err))
+		s.lg.Error(fmt.Sprintf("server error: write error: %v", err))
 		return
 	}
 }

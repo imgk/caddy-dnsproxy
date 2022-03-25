@@ -20,11 +20,17 @@ func init() {
 	caddy.RegisterModule(Handler{})
 }
 
+// DefaultPrefix is ...
+const DefaultPrefix = "/dns-query"
+
 // Handler is ...
 type Handler struct {
+	// Prefix is ...
 	Prefix string `json:"prefix,omitempty"`
+	// BufferPool is ...
+	*app.BufferPool
 
-	app *app.App
+	up app.Upstream
 }
 
 // CaddyModule is ...
@@ -38,7 +44,7 @@ func (Handler) CaddyModule() caddy.ModuleInfo {
 // Provision is ...
 func (m *Handler) Provision(ctx caddy.Context) error {
 	if m.Prefix == "" {
-		m.Prefix = "/dns-query"
+		m.Prefix = DefaultPrefix
 	}
 	if !ctx.AppIsConfigured(app.CaddyAppID) {
 		return errors.New("dnsproxy is not configured")
@@ -47,7 +53,8 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 	if err != nil {
 		return err
 	}
-	m.app = mod.(*app.App)
+	m.up = mod.(app.Upstream)
+	m.BufferPool = mod.(*app.App).BufferPool()
 	return nil
 }
 
@@ -71,7 +78,9 @@ func (m *Handler) serveGet(w http.ResponseWriter, r *http.Request) error {
 	if !ok || len(ss) < 1 {
 		return errors.New("no dns query")
 	}
-	buf := make([]byte, 2048)
+
+	buf := m.Get()
+	defer m.Put(buf)
 
 	n, err := base64.RawURLEncoding.Decode(buf, func(s string) []byte {
 		return unsafe.Slice((*byte)(unsafe.Pointer(*(*uintptr)(unsafe.Pointer(&s)))), len(s))
@@ -84,7 +93,9 @@ func (m *Handler) serveGet(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *Handler) servePost(w http.ResponseWriter, r *http.Request) error {
-	buf := make([]byte, 2048)
+	buf := m.Get()
+	defer m.Put(buf)
+
 	// read dns message from request
 	n, err := Buffer(buf).ReadFrom(r.Body)
 	if err != nil {
@@ -102,7 +113,7 @@ func (m *Handler) response(w http.ResponseWriter, buf []byte, n int) error {
 	}
 
 	// request response
-	msg, err := m.app.Exchange(msg)
+	msg, err := m.up.Exchange(msg)
 	if err != nil {
 		return err
 	}

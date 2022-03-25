@@ -3,6 +3,8 @@ package app
 import (
 	"encoding/json"
 	"errors"
+	"sync"
+	"unsafe"
 
 	"github.com/caddyserver/caddy/v2"
 
@@ -11,12 +13,17 @@ import (
 	"go.uber.org/zap"
 )
 
+// CaddyAppID is ...
 const CaddyAppID = "dnsproxy"
 
 const (
-	DefaultUDPPort  = 53
-	DefaultTCPPort  = 53
-	DefaultTLSPort  = 853
+	// DefaultUDPPort is ...
+	DefaultUDPPort = 53
+	// DefaultTCPPort is ...
+	DefaultTCPPort = 53
+	// DefaultTLSPort is ...
+	DefaultTLSPort = 853
+	// DefaultQuicPort is ...
 	DefaultQuicPort = 853
 )
 
@@ -24,11 +31,43 @@ func init() {
 	caddy.RegisterModule(App{})
 }
 
+// BufferPool is ...
+type BufferPool struct {
+	sync.Pool
+}
+
+// NewBufferPool is ...
+func NewBufferPool() *BufferPool {
+	return &BufferPool{
+		Pool: sync.Pool{
+			New: NewBuffer,
+		},
+	}
+}
+
+// NewBuffer is ...
+func NewBuffer() any {
+	buf := make([]byte, dns.MaxMsgSize)
+	return &buf[0]
+}
+
+// Get is ...
+func (p *BufferPool) Get() []byte {
+	return unsafe.Slice(p.Pool.Get().(*byte), dns.MaxMsgSize)
+}
+
+// Put is ...
+func (p *BufferPool) Put(buf []byte) {
+	p.Pool.Put(&buf[0])
+}
+
 // App is ...
 type App struct {
 	// Handlers is ...
 	Handlers []*struct {
-		UpstreamRaw json.RawMessage   `json:"upstream" caddy:"namespace=dnsproxy.upstreams inline_key=upstream"`
+		// UpstreamRaw is ...
+		UpstreamRaw json.RawMessage `json:"upstream" caddy:"namespace=dnsproxy.upstreams inline_key=upstream"`
+		// MatchersRaw is ...
 		MatchersRaw []json.RawMessage `json:"match" caddy:"namespace=dnsproxy.matchers inline_key=matcher"`
 	} `json:"handlers"`
 	// ListenUDP is ...
@@ -45,6 +84,7 @@ type App struct {
 	lg       *zap.Logger
 	handlers []Handler
 	servers  []Server
+	bp       *BufferPool
 }
 
 // CaddyModule is ...
@@ -107,6 +147,7 @@ func (app *App) Provision(ctx caddy.Context) error {
 		app.handlers = append(app.handlers, hd)
 	}
 
+	app.bp = NewBufferPool()
 	return nil
 }
 
@@ -154,6 +195,11 @@ func (app *App) Cleanup() error {
 // Logger is ...
 func (app *App) Logger() *zap.Logger {
 	return app.lg
+}
+
+// BufferPool is ...
+func (app *App) BufferPool() *BufferPool {
+	return app.bp
 }
 
 // Exchange is ...

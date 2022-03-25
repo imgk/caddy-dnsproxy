@@ -13,17 +13,22 @@ import (
 type Packet struct {
 	// Conn is ...
 	Conn net.PacketConn
-	// App is ...
-	App *App
+	// BufferPool is ...
+	*BufferPool
 
+	up Upstream
 	lg *zap.Logger
 }
 
 // Run is ..
 func (s *Packet) Run() {
-	buf := make([]byte, 2048)
+	buf := s.Get()
+	defer s.Put(buf)
+
 	msg := &dns.Msg{}
+
 	for {
+		// read message
 		n, addr, err := s.Conn.ReadFrom(buf)
 		if err != nil {
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
@@ -32,25 +37,29 @@ func (s *Packet) Run() {
 			if errors.Is(err, net.ErrClosed) {
 				return
 			}
-			s.lg.Error(fmt.Sprintf("udp server error: read packet error: %v", err))
+			s.lg.Error(fmt.Sprintf("server error: read packet error: %v", err))
 			return
 		}
 		if err := msg.Unpack(buf[:n]); err != nil {
-			s.lg.Error(fmt.Sprintf("udp server error: unpack error: %v", err))
+			s.lg.Error(fmt.Sprintf("server error: unpack error: %v", err))
 			continue
 		}
-		msg, err = s.App.Exchange(msg)
+
+		// request response
+		msg, err = s.up.Exchange(msg)
 		if err != nil {
-			s.lg.Error(fmt.Sprintf("udp server error: exchange error: %v", err))
+			s.lg.Error(fmt.Sprintf("server error: exchange error: %v", err))
 			continue
 		}
 		bb, err := msg.PackBuffer(buf)
 		if err != nil {
-			s.lg.Error(fmt.Sprintf("udp server error: pack error: %v", err))
+			s.lg.Error(fmt.Sprintf("server error: pack error: %v", err))
 			continue
 		}
+
+		// write message
 		if _, err := s.Conn.WriteTo(bb, addr); err != nil {
-			s.lg.Error(fmt.Sprintf("udp server error: write back error: %v", err))
+			s.lg.Error(fmt.Sprintf("server error: write back error: %v", err))
 			continue
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddytls"
@@ -29,9 +30,10 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 			return nil, err
 		}
 		s := &Packet{
-			Conn: conn,
-			App:  app,
-			lg:   app.Logger().Named("udp"),
+			Conn:       conn,
+			BufferPool: app.BufferPool(),
+			up:         app,
+			lg:         app.Logger().Named("udp"),
 		}
 		s.lg.Info("start server")
 		return s, nil
@@ -41,13 +43,15 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 			return nil, err
 		}
 		s := &Stream{
-			Listener: ln,
-			App:      app,
-			lg:       app.Logger().Named("tcp"),
+			Listener:   ln,
+			BufferPool: app.BufferPool(),
+			up:         app,
+			lg:         app.Logger().Named("tcp"),
 		}
 		s.lg.Info("start server")
 		return s, nil
 	case "tls":
+		// enable https
 		connPolicies := caddytls.ConnectionPolicies{new(caddytls.ConnectionPolicy)}
 		if err := connPolicies.Provision(ctx); err != nil {
 			return nil, err
@@ -56,11 +60,14 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 		if err != nil {
 			return nil, err
 		}
-		ln = tls.NewListener(ln, connPolicies.TLSConfig(ctx))
+		// create tls.Config
+		tlsConfig := connPolicies.TLSConfig(ctx)
+		ln = tls.NewListener(ln, tlsConfig)
 		s := &Stream{
-			Listener: ln,
-			App:      app,
-			lg:       app.Logger().Named("tls"),
+			Listener:   ln,
+			BufferPool: app.BufferPool(),
+			up:         app,
+			lg:         app.Logger().Named("tls"),
 		}
 		s.lg.Info("start server")
 		return s, nil
@@ -69,15 +76,22 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 		if err != nil {
 			return nil, err
 		}
+		// enable https
 		connPolicies := caddytls.ConnectionPolicies{new(caddytls.ConnectionPolicy)}
 		if err := connPolicies.Provision(ctx); err != nil {
 			return nil, err
 		}
-		ln, err := quic.Listen(conn, connPolicies.TLSConfig(ctx), &quic.Config{})
+		// create tls.Config
+		tlsConfig := connPolicies.TLSConfig(ctx)
+		tlsConfig.NextProtos = []string{NextProtoDQ, "doq-i00", "dq", "doq"}
+		ln, err := quic.Listen(conn, tlsConfig, &quic.Config{
+			MaxIdleTimeout: 5 * time.Minute,
+		})
 		s := &Quic{
-			Listener: ln,
-			App:      app,
-			lg:       app.Logger().Named("quic"),
+			Listener:   ln,
+			BufferPool: app.BufferPool(),
+			up:         app,
+			lg:         app.Logger().Named("quic"),
 		}
 		s.lg.Info("start server")
 		return s, nil
