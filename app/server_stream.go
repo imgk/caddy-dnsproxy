@@ -37,8 +37,8 @@ func (s *Stream) Run() {
 		go func(conn net.Conn, up Upstream) {
 			defer conn.Close()
 
-			buf := s.Get()
-			defer s.Put(buf)
+			ptr, buf := s.GetValue()
+			defer s.Put(ptr)
 
 			msg := &dns.Msg{}
 

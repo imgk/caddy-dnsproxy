@@ -67,8 +67,8 @@ func (s *Quic) handleSession(sess quic.Session) {
 func (s *Quic) handleStream(stream quic.Stream) {
 	defer stream.Close()
 
-	buf := s.Get()
-	defer s.Put(buf)
+	ptr, buf := s.GetValue()
+	defer s.Put(ptr)
 
 	msg := &dns.Msg{}
 

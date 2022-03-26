@@ -79,8 +79,8 @@ func (m *Handler) serveGet(w http.ResponseWriter, r *http.Request) error {
 		return errors.New("no dns query")
 	}
 
-	buf := m.Get()
-	defer m.Put(buf)
+	ptr, buf := m.GetValue()
+	defer m.Put(ptr)
 
 	n, err := base64.RawURLEncoding.Decode(buf, func(s string) []byte {
 		return unsafe.Slice((*byte)(unsafe.Pointer(*(*uintptr)(unsafe.Pointer(&s)))), len(s))
@@ -93,8 +93,8 @@ func (m *Handler) serveGet(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *Handler) servePost(w http.ResponseWriter, r *http.Request) error {
-	buf := m.Get()
-	defer m.Put(buf)
+	ptr, buf := m.GetValue()
+	defer m.Put(ptr)
 
 	// read dns message from request
 	n, err := Buffer(buf).ReadFrom(r.Body)

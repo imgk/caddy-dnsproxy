@@ -22,8 +22,8 @@ type Packet struct {
 
 // Run is ..
 func (s *Packet) Run() {
-	buf := s.Get()
-	defer s.Put(buf)
+	ptr, buf := s.GetValue()
+	defer s.Put(ptr)
 
 	msg := &dns.Msg{}
 
