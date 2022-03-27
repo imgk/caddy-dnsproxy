@@ -11,6 +11,7 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 
+	"github.com/imgk/memory-go"
 	"github.com/miekg/dns"
 
 	"github.com/imgk/caddy-dnsproxy/app"
@@ -27,8 +28,6 @@ const DefaultPrefix = "/dns-query"
 type Handler struct {
 	// Prefix is ...
 	Prefix string `json:"prefix,omitempty"`
-	// BufferPool is ...
-	*app.BufferPool
 
 	up app.Upstream
 }
@@ -54,7 +53,6 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 		return err
 	}
 	m.up = mod.(app.Upstream)
-	m.BufferPool = mod.(*app.App).BufferPool()
 	return nil
 }
 
@@ -79,8 +77,8 @@ func (m *Handler) serveGet(w http.ResponseWriter, r *http.Request) error {
 		return errors.New("no dns query")
 	}
 
-	ptr, buf := m.GetValue()
-	defer m.Put(ptr)
+	ptr, buf := memory.Alloc[byte](dns.MaxMsgSize)
+	defer memory.Free(ptr)
 
 	n, err := base64.RawURLEncoding.Decode(buf, func(s string) []byte {
 		return unsafe.Slice((*byte)(unsafe.Pointer(*(*uintptr)(unsafe.Pointer(&s)))), len(s))
@@ -93,8 +91,8 @@ func (m *Handler) serveGet(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (m *Handler) servePost(w http.ResponseWriter, r *http.Request) error {
-	ptr, buf := m.GetValue()
-	defer m.Put(ptr)
+	ptr, buf := memory.Alloc[byte](dns.MaxMsgSize)
+	defer memory.Free(ptr)
 
 	// read dns message from request
 	n, err := Buffer(buf).ReadFrom(r.Body)

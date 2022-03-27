@@ -5,7 +5,10 @@ go 1.18
 require (
 	github.com/AdguardTeam/dnsproxy v0.42.0
 	github.com/caddyserver/caddy/v2 v2.5.0-beta.1.0.20220321230538-55b4c12e0404
+	github.com/imgk/memory-go v0.0.0-20220326235356-cfa0440d1c01
+	github.com/lucas-clemente/quic-go v0.25.0
 	github.com/miekg/dns v1.1.47
+	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.21.0
 )
 
@@ -54,7 +57,6 @@ require (
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/libdns/libdns v0.2.1 // indirect
-	github.com/lucas-clemente/quic-go v0.25.0 // indirect
 	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/marten-seemann/qpack v0.2.1 // indirect
 	github.com/marten-seemann/qtls-go1-16 v0.1.4 // indirect
@@ -95,7 +97,6 @@ require (
 	go.step.sm/crypto v0.13.0 // indirect
 	go.step.sm/linkedca v0.7.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3 // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect

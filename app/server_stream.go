@@ -9,14 +9,14 @@ import (
 
 	"github.com/miekg/dns"
 	"go.uber.org/zap"
+
+	"github.com/imgk/memory-go"
 )
 
 // Stream is ...
 type Stream struct {
 	// Listener is ...
 	net.Listener
-	// BufferPool is ...
-	*BufferPool
 
 	up Upstream
 	lg *zap.Logger
@@ -37,8 +37,8 @@ func (s *Stream) Run() {
 		go func(conn net.Conn, up Upstream) {
 			defer conn.Close()
 
-			ptr, buf := s.GetValue()
-			defer s.Put(ptr)
+			ptr, buf := memory.Alloc[byte](dns.MaxMsgSize)
+			defer memory.Free(ptr)
 
 			msg := &dns.Msg{}
 

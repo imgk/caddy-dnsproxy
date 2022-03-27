@@ -31,7 +31,6 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 		}
 		s := &Packet{
 			Conn:       conn,
-			BufferPool: app.BufferPool(),
 			up:         app,
 			lg:         app.Logger().Named("udp"),
 		}
@@ -44,7 +43,6 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 		}
 		s := &Stream{
 			Listener:   ln,
-			BufferPool: app.BufferPool(),
 			up:         app,
 			lg:         app.Logger().Named("tcp"),
 		}
@@ -65,7 +63,6 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 		ln = tls.NewListener(ln, tlsConfig)
 		s := &Stream{
 			Listener:   ln,
-			BufferPool: app.BufferPool(),
 			up:         app,
 			lg:         app.Logger().Named("tls"),
 		}
@@ -89,7 +86,6 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 		})
 		s := &Quic{
 			Listener:   ln,
-			BufferPool: app.BufferPool(),
 			up:         app,
 			lg:         app.Logger().Named("quic"),
 		}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/imgk/memory-go"
 	"github.com/miekg/dns"
 	"go.uber.org/zap"
 )
@@ -13,8 +14,6 @@ import (
 type Packet struct {
 	// Conn is ...
 	Conn net.PacketConn
-	// BufferPool is ...
-	*BufferPool
 
 	up Upstream
 	lg *zap.Logger
@@ -22,8 +21,8 @@ type Packet struct {
 
 // Run is ..
 func (s *Packet) Run() {
-	ptr, buf := s.GetValue()
-	defer s.Put(ptr)
+	ptr, buf := memory.Alloc[byte](dns.MaxMsgSize)
+	defer memory.Free(ptr)
 
 	msg := &dns.Msg{}
 

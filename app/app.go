@@ -52,7 +52,6 @@ type App struct {
 	lg       *zap.Logger
 	handlers []Handler
 	servers  []Server
-	bp       *BufferPool
 }
 
 // CaddyModule is ...
@@ -79,7 +78,6 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	app.lg = ctx.Logger(app)
-	app.bp = NewBufferPool()
 
 	for _, v := range app.Servers {
 		switch v {
@@ -163,11 +161,6 @@ func (app *App) Cleanup() error {
 // Logger is ...
 func (app *App) Logger() *zap.Logger {
 	return app.lg
-}
-
-// BufferPool is ...
-func (app *App) BufferPool() *BufferPool {
-	return app.bp
 }
 
 // Exchange is ...

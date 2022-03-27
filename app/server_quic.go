@@ -8,6 +8,8 @@ import (
 	"github.com/lucas-clemente/quic-go"
 	"github.com/miekg/dns"
 	"go.uber.org/zap"
+
+	"github.com/imgk/memory-go"
 )
 
 // NextProtoDQ is the ALPN token for DoQ. During connection establishment,
@@ -21,8 +23,6 @@ const NextProtoDQ = "doq-i02"
 type Quic struct {
 	// Listener is ...
 	Listener quic.Listener
-	// BufferPool is ...
-	*BufferPool
 
 	up Upstream
 	lg *zap.Logger
@@ -67,8 +67,8 @@ func (s *Quic) handleSession(sess quic.Session) {
 func (s *Quic) handleStream(stream quic.Stream) {
 	defer stream.Close()
 
-	ptr, buf := s.GetValue()
-	defer s.Put(ptr)
+	ptr, buf := memory.Alloc[byte](dns.MaxMsgSize)
+	defer memory.Free(ptr)
 
 	msg := &dns.Msg{}
 
