@@ -32,7 +32,7 @@ func init() {
 // App is ...
 type App struct {
 	// Handlers is ...
-	Handlers []*struct {
+	Handlers []struct {
 		// UpstreamRaw is ...
 		UpstreamRaw json.RawMessage `json:"upstream" caddy:"namespace=dnsproxy.upstreams inline_key=upstream"`
 		// MatchersRaw is ...
@@ -50,6 +50,7 @@ type App struct {
 	Servers []string `json:"servers,omitempty"`
 
 	lg       *zap.Logger
+	ctx      caddy.Context
 	handlers []Handler
 	servers  []Server
 }
@@ -78,32 +79,20 @@ func (app *App) Provision(ctx caddy.Context) error {
 	}
 
 	app.lg = ctx.Logger(app)
-
-	for _, v := range app.Servers {
-		switch v {
-		case "tcp", "udp", "tls", "quic":
-			srv, err := NewServer(app, ctx, v)
-			if err != nil {
-				return err
-			}
-			app.servers = append(app.servers, srv)
-		default:
-			return errors.New("not a valid server type")
-		}
-	}
+	app.ctx = ctx
 
 	for _, v := range app.Handlers {
 		hd := Handler{}
 
 		// parse upstream
-		mod, err := ctx.LoadModule(v, "UpstreamRaw")
+		mod, err := ctx.LoadModule(&v, "UpstreamRaw")
 		if err != nil {
 			return err
 		}
 		hd.Upstream = mod.(Upstream)
 
 		// parse matchers
-		mods, err := ctx.LoadModule(v, "MatchersRaw")
+		mods, err := ctx.LoadModule(&v, "MatchersRaw")
 		if err != nil {
 			return err
 		}
@@ -117,13 +106,21 @@ func (app *App) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-// Validate is ...
-func (app *App) Validate() error {
-	return nil
-}
-
 // Start is ...
 func (app *App) Start() error {
+	for _, v := range app.Servers {
+		switch v {
+		case "tcp", "udp", "tls", "quic":
+			srv, err := NewServer(app, app.ctx, v)
+			if err != nil {
+				return err
+			}
+			app.servers = append(app.servers, srv)
+		default:
+			return errors.New("not a valid server type")
+		}
+	}
+
 	for _, srv := range app.servers {
 		go srv.Run()
 	}
@@ -211,5 +208,4 @@ var (
 	_ caddy.App          = (*App)(nil)
 	_ caddy.CleanerUpper = (*App)(nil)
 	_ caddy.Provisioner  = (*App)(nil)
-	_ caddy.Validator    = (*App)(nil)
 )

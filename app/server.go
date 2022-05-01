@@ -30,9 +30,9 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 			return nil, err
 		}
 		s := &Packet{
-			Conn:       conn,
-			up:         app,
-			lg:         app.Logger().Named("udp"),
+			Conn: conn,
+			up:   app,
+			lg:   app.Logger().Named("udp"),
 		}
 		s.lg.Info("start server")
 		return s, nil
@@ -42,9 +42,9 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 			return nil, err
 		}
 		s := &Stream{
-			Listener:   ln,
-			up:         app,
-			lg:         app.Logger().Named("tcp"),
+			Listener: ln,
+			up:       app,
+			lg:       app.Logger().Named("tcp"),
 		}
 		s.lg.Info("start server")
 		return s, nil
@@ -62,9 +62,9 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 		tlsConfig := connPolicies.TLSConfig(ctx)
 		ln = tls.NewListener(ln, tlsConfig)
 		s := &Stream{
-			Listener:   ln,
-			up:         app,
-			lg:         app.Logger().Named("tls"),
+			Listener: ln,
+			up:       app,
+			lg:       app.Logger().Named("tls"),
 		}
 		s.lg.Info("start server")
 		return s, nil
@@ -85,9 +85,9 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 			MaxIdleTimeout: 5 * time.Minute,
 		})
 		s := &Quic{
-			Listener:   ln,
-			up:         app,
-			lg:         app.Logger().Named("quic"),
+			Listener: ln,
+			up:       app,
+			lg:       app.Logger().Named("quic"),
 		}
 		s.lg.Info("start server")
 		return s, nil
