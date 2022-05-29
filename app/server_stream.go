@@ -93,7 +93,6 @@ func (s *Stream) Run() {
 			}
 		}(conn, s.up)
 	}
-	return
 }
 
 // Close is ...

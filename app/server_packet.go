@@ -62,7 +62,6 @@ func (s *Packet) Run() {
 			continue
 		}
 	}
-	return
 }
 
 // Close is ...

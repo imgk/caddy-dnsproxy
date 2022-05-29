@@ -42,7 +42,6 @@ func (s *Quic) Run() {
 		}
 		go s.handleSession(sess)
 	}
-	return
 }
 
 // CLose is ...
@@ -50,7 +49,7 @@ func (s *Quic) Close() error {
 	return s.Listener.Close()
 }
 
-func (s *Quic) handleSession(sess quic.Session) {
+func (s *Quic) handleSession(sess quic.Connection) {
 	defer sess.CloseWithError(0, "")
 
 	// accept new stream
