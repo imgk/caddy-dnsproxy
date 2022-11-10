@@ -23,6 +23,7 @@ func (Terminate) CaddyModule() caddy.ModuleInfo {
 
 // Exchange is ...
 func (m *Terminate) Exchange(in *dns.Msg) (*dns.Msg, error) {
+	in.MsgHdr.Response = true
 	return in, nil
 }
 
