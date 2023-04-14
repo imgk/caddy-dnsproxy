@@ -45,8 +45,8 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 	if m.Prefix == "" {
 		m.Prefix = DefaultPrefix
 	}
-	if !ctx.AppIsConfigured(app.CaddyAppID) {
-		return errors.New("dnsproxy is not configured")
+	if _, err := ctx.AppIfConfigured(app.CaddyAppID); err != nil {
+		return err
 	}
 	mod, err := ctx.App(app.CaddyAppID)
 	if err != nil {

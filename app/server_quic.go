@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/quic-go/quic-go"
 	"github.com/miekg/dns"
+	"github.com/quic-go/quic-go"
 	"go.uber.org/zap"
 
 	"github.com/imgk/memory-go"
