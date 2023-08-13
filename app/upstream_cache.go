@@ -23,7 +23,7 @@ type Cache struct {
 // CaddyModule is ...
 func (Cache) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "dnsproxy.upstreams.Cache",
+		ID:  "dnsproxy.upstreams.cache",
 		New: func() caddy.Module { return new(Cache) },
 	}
 }
