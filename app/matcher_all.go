@@ -16,7 +16,7 @@ type MatchAll struct{}
 // CaddyModule is ...
 func (MatchAll) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "dnsproxy.matchers.match_all",
+		ID:  "dnsproxy.matchers.all",
 		New: func() caddy.Module { return new(MatchAll) },
 	}
 }

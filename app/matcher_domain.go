@@ -23,7 +23,7 @@ type MatchDomain struct {
 // CaddyModule is ...
 func (MatchDomain) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "dnsproxy.matchers.match_domain",
+		ID:  "dnsproxy.matchers.domain",
 		New: func() caddy.Module { return new(MatchDomain) },
 	}
 }
