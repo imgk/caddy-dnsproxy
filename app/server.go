@@ -84,6 +84,9 @@ func NewServer(app *App, ctx caddy.Context, t string) (Server, error) {
 		ln, err := quic.Listen(conn, tlsConfig, &quic.Config{
 			MaxIdleTimeout: 5 * time.Minute,
 		})
+		if err != nil {
+			return nil, err
+		}
 		s := &Quic{
 			Listener: ln,
 			up:       app,

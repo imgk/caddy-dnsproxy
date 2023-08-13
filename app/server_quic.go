@@ -22,7 +22,7 @@ const NextProtoDQ = "doq-i02"
 // Quic is ...
 type Quic struct {
 	// Listener is ...
-	Listener quic.Listener
+	Listener *quic.Listener
 
 	up Upstream
 	lg *zap.Logger

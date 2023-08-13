@@ -45,8 +45,8 @@ func (m *Handler) Provision(ctx caddy.Context) error {
 	if m.Prefix == "" {
 		m.Prefix = DefaultPrefix
 	}
-	if _, err := ctx.AppIfConfigured(app.CaddyAppID); err != nil {
-		return err
+	if ctx.AppIfConfigured(app.CaddyAppID) == nil {
+		return errors.New(app.CaddyAppID + " is not configured")
 	}
 	mod, err := ctx.App(app.CaddyAppID)
 	if err != nil {
